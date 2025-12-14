@@ -1,0 +1,1076 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Grimório do Eclipse</title>
+    
+    <!-- 1. Carrega Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <!-- 2. Carrega React e ReactDOM -->
+    <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+    <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+    
+    <!-- 3. Carrega Babel -->
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+
+    <style>
+        /* Estilos base para garantir fundo escuro mesmo se o React falhar */
+        body { background-color: #020617; color: #cbd5e1; margin: 0; font-family: sans-serif; }
+        ::-webkit-scrollbar { width: 8px; }
+        ::-webkit-scrollbar-track { background: #0f172a; }
+        ::-webkit-scrollbar-thumb { background: #334155; border-radius: 4px; }
+        ::-webkit-scrollbar-thumb:hover { background: #475569; }
+        #error-display { display: none; padding: 20px; background: #450a0a; color: #fecaca; border: 1px solid #ef4444; margin: 20px; border-radius: 8px; }
+    </style>
+</head>
+<body>
+    <!-- Display de Erro de Emergência -->
+    <div id="error-display"></div>
+
+    <!-- Container Principal do React -->
+    <div id="root">
+        <div style="height: 100vh; display: flex; align-items: center; justify-content: center; flex-direction: column;">
+            <svg class="animate-spin h-10 w-10 text-amber-500 mb-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+            </svg>
+            <span class="text-slate-400 font-bold">Carregando Grimório...</span>
+        </div>
+    </div>
+
+    <!-- Script de Captura de Erros Global -->
+    <script>
+        window.onerror = function(message, source, lineno, colno, error) {
+            const display = document.getElementById('error-display');
+            display.style.display = 'block';
+            display.innerHTML = `<strong>Erro Crítico:</strong> ${message}<br><small>${source}:${lineno}</small>`;
+            console.error(error);
+        };
+    </script>
+
+    <!-- Aplicação React -->
+    <script type="text/babel">
+        const { useState, useEffect, useCallback } = React;
+
+        // --- ÍCONES (SVG Inline) ---
+        const Icons = {
+            Shield: (props) => <svg {...props} xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M20 13c0 5-3.5 7.5-7.66 8.95a1 1 0 0 1-.67-.01C7.5 20.5 4 18 4 13V6a1 1 0 0 1 1-1c2 0 4.5-1.2 6.24-2.72a1.17 1.17 0 0 1 1.52 0C14.51 3.81 17 5 19 5a1 1 0 0 1 1 1z"/></svg>,
+            Heart: (props) => <svg {...props} xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M19 14c1.49-1.46 3-3.21 3-5.5A5.5 5.5 0 0 0 16.5 3c-1.76 0-3 .5-4.5 2-1.5-1.5-2.74-2-4.5-2A5.5 5.5 0 0 0 2 8.5c0 2.3 1.5 4.05 3 5.5l7 7Z"/></svg>,
+            Wind: (props) => <svg {...props} xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M17.7 7.7a2.5 2.5 0 1 1 1.8 4.3H2"/><path d="M9.6 4.6A2 2 0 1 1 11 8H2"/><path d="M12.6 19.4A2 2 0 1 0 14 16H2"/></svg>,
+            Skull: (props) => <svg {...props} xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m12.5 17-.5-1-.5 1h1z"/><path d="M15 22a1 1 0 0 0 1-1v-1a2 2 0 0 0 1.56-3.25 8 8 0 1 0-11.12 0A2 2 0 0 0 8 20v1a1 1 0 0 0 1 1z"/><circle cx="15" cy="12" r="1"/><circle cx="9" cy="12" r="1"/></svg>,
+            Swords: (props) => <svg {...props} xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="14.5 17.5 3 6 3 3 6 3 17.5 14.5"/><line x1="13" x2="19" y1="19" y2="13"/><line x1="16" x2="20" y1="16" y2="20"/><line x1="19" x2="21" y1="21" y2="19"/><polyline points="14.5 6.5 18 3 21 3 21 6 17.5 9.5"/><line x1="5" x2="9" y1="14" y2="18"/><line x1="7" x2="4" y1="17" y2="20"/><line x1="3" x2="5" y1="19" y2="21"/></svg>,
+            Zap: (props) => <svg {...props} xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>,
+            Activity: (props) => <svg {...props} xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg>,
+            Plus: (props) => <svg {...props} xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M5 12h14"/><path d="M12 5v14"/></svg>,
+            X: (props) => <svg {...props} xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>,
+            Menu: (props) => <svg {...props} xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="4" x2="20" y1="12" y2="12"/><line x1="4" x2="20" y1="6" y2="6"/><line x1="4" x2="20" y1="18" y2="18"/></svg>,
+            Moon: (props) => <svg {...props} xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z"/></svg>,
+            Sun: (props) => <svg {...props} xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="4"/><path d="M12 2v2"/><path d="M12 20v2"/><path d="m4.93 4.93 1.41 1.41"/><path d="m17.66 17.66 1.41 1.41"/><path d="M2 12h2"/><path d="M20 12h2"/><path d="m6.34 17.66-1.41 1.41"/><path d="m19.07 4.93-1.41 1.41"/></svg>,
+            Users: (props) => <svg {...props} xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>,
+            Flame: (props) => <svg {...props} xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M8.5 14.5A2.5 2.5 0 0 0 11 12c0-1.38-.5-2-1-3-1.072-2.143-.224-4.054 2-6 .5 2.5 2 4.9 4 6.5 2 1.6 3 3.5 3 5.5a7 7 0 1 1-14 0c0-1.153.433-2.294 1-3a2.5 2.5 0 0 0 2.5 2.5z"/></svg>,
+            Cloud: (props) => <svg {...props} xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M17.5 19c0-1.7-1.3-3-3-3h-11a4 4 0 1 1 .9-7.9 4 4 0 0 1 7.4.2 4 4 0 0 1 3.7 10.7z"/></svg>,
+            Anchor: (props) => <svg {...props} xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="5" r="3"/><line x1="12" x2="12" y1="22" y2="8"/><path d="M5 12H2a10 10 0 0 0 20 0h-3"/></svg>,
+            Star: (props) => <svg {...props} xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>,
+            Sparkles: (props) => <svg {...props} xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m12 3-1.912 5.813a2 2 0 0 1-1.275 1.275L3 12l5.813 1.912a2 2 0 0 1 1.275 1.275L12 21l1.912-5.813a2 2 0 0 1 1.275-1.275L21 12l-5.813-1.912a2 2 0 0 1-1.275-1.275L12 3Z"/><path d="M5 3v4"/><path d="M9 3v4"/><path d="M3 5h4"/><path d="M3 9h4"/></svg>,
+            MapIcon: (props) => <svg {...props} xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polygon points="3 6 9 3 15 6 21 3 21 18 15 21 9 18 3 21"/><line x1="9" x2="9" y1="3" y2="18"/><line x1="15" x2="15" y1="6" y2="21"/></svg>,
+            RotateCcw: (props) => <svg {...props} xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/></svg>,
+            Play: (props) => <svg {...props} xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polygon points="5 3 19 12 5 21 5 3"/></svg>,
+            Dices: (props) => <svg {...props} xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect width="12" height="12" x="2" y="10" rx="2" ry="2"/><path d="m17.92 14 3.5-3.5a2.24 2.24 0 0 0 0-3l-5-4.92a2.24 2.24 0 0 0-3 0L10 6"/><path d="M6 18h.01"/><path d="M10 14h.01"/><path d="M15 6h.01"/><path d="M18 9h.01"/></svg>,
+            Eye: (props) => <svg {...props} xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z"/><circle cx="12" cy="12" r="3"/></svg>,
+            AlertTriangle: (props) => <svg {...props} xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z"/><path d="M12 9v4"/><path d="M12 17h.01"/></svg>,
+            Scroll: (props) => <svg {...props} xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M8 17.8a3.5 3.5 0 0 0-3.5-3.5c-1.75 0-3 1.56-3 3.5s1.25 3.5 3 3.5 3.5-1.56 3.5-3.5Z"/><path d="M16 5.8a3.5 3.5 0 0 0-3.5-3.5c-1.75 0-3 1.56-3 3.5s1.25 3.5 3 3.5 3.5-1.56 3.5-3.5Z"/><path d="M19 22V8a3 3 0 0 0-3-3"/><path d="M5 22V8a3 3 0 0 1 3-3"/><path d="M8 22h8"/></svg>
+        };
+
+        // --- DADOS ---
+        const XP_THRESHOLDS = {
+            1: { easy: 25, medium: 50, hard: 75, deadly: 100 },
+            2: { easy: 50, medium: 100, hard: 150, deadly: 200 },
+            3: { easy: 75, medium: 150, hard: 225, deadly: 400 },
+            4: { easy: 125, medium: 250, hard: 375, deadly: 500 },
+            5: { easy: 250, medium: 500, hard: 750, deadly: 1100 },
+            6: { easy: 300, medium: 600, hard: 900, deadly: 1400 },
+            7: { easy: 350, medium: 750, hard: 1100, deadly: 1700 },
+            8: { easy: 450, medium: 900, hard: 1400, deadly: 2100 },
+            9: { easy: 500, medium: 1100, hard: 1600, deadly: 2400 },
+            10: { easy: 600, medium: 1200, hard: 1900, deadly: 2800 },
+            11: { easy: 800, medium: 1600, hard: 2400, deadly: 3600 },
+            12: { easy: 1000, medium: 2000, hard: 3000, deadly: 4500 },
+            13: { easy: 1100, medium: 2200, hard: 3400, deadly: 5100 },
+            14: { easy: 1250, medium: 2500, hard: 3800, deadly: 5700 },
+            15: { easy: 1400, medium: 2800, hard: 4300, deadly: 6400 },
+            16: { easy: 1600, medium: 3200, hard: 4800, deadly: 7200 },
+            17: { easy: 2000, medium: 3900, hard: 5900, deadly: 8800 },
+            18: { easy: 2100, medium: 4200, hard: 6300, deadly: 9500 },
+            19: { easy: 2400, medium: 4900, hard: 7300, deadly: 10900 },
+            20: { easy: 2800, medium: 5700, hard: 8500, deadly: 12700 },
+        };
+
+        const initialCreatures = [
+            {
+                id: 'garw-renk',
+                name: 'Garw-Renk',
+                meta: 'Tortle, Paladino 4 (Juramento da Coragem Protetora)',
+                ac: '20 (carapaça, escudo)',
+                hp: '44 (4d10+12)',
+                speed: '9 m',
+                scores: { str: 16, dex: 10, con: 16, int: 10, wis: 12, cha: 14 },
+                saves: ['Sabedoria', 'Carisma'],
+                skills: ['Atletismo +5', 'Intuição +3', 'Religião +2'],
+                vulnerabilities: '',
+                resistances: '',
+                immunities: '',
+                senses: 'Percepção passiva 11',
+                languages: 'Aquan, Comum',
+                challenge: 'PJ Nível 4',
+                xp: 0,
+                traits: [
+                { name: 'Defesa de Carapaça (Ação)', desc: 'Até o início do próximo turno: CA +4 (total 24), Vantagem em FOR/CON, Desvantagem em DES, Deslocamento 0.' },
+                { name: 'Sentido Divino (3/dia)', desc: 'Detecta celestiais, ínferos ou mortos-vivos em 18 m.' },
+                { name: 'Imposição das Mãos', desc: 'Pool de 20 PV para curar ou remover doenças/venenos.' },
+                { name: 'Canalizar: Postura do Guardião (1 min)', desc: 'Aliados a 3m ganham +1 CA. Reação: Reduzir dano em aliado na área em 1d6+2.' },
+                { name: 'Canalizar: Desafio Sagrado', desc: 'Bônus. Criatura a 9m faz CD 12 Sab ou tem desvantagem p/ atacar outros por 1 min.' }
+                ],
+                actions: [
+                { name: 'Espada Longa', desc: 'Corpo a Corpo: +5 para acertar. Dano: 1d8 + 3 cortante.', type: 'attack', bonus: 5, dice: '1d8', dmgBonus: 3, dtype: 'cortante' },
+                { name: 'Destruição Divina (Smite)', desc: 'Ao acertar, gaste slot: +2d8 radiante (+1d8 vs ínferos/mortos-vivos).', type: 'info' }
+                ],
+                reactions: [
+                { name: 'Escudo da Fé Viva', desc: 'Quando aliado adjacente é atacado, impõe desvantagem no ataque.' }
+                ],
+                theme: 'emerald'
+            },
+            {
+                id: 'thraxa',
+                name: 'Thraxa, a Fera Lunar',
+                meta: 'Grande Monstruosidade, Caótica Neutra',
+                ac: '15 (pele espessa)',
+                hp: '75 (10d10+20)',
+                speed: '12 m',
+                scores: { str: 18, dex: 14, con: 15, int: 8, wis: 12, cha: 8 },
+                saves: [],
+                skills: [],
+                vulnerabilities: '',
+                resistances: 'cortante e perfurante não mágicos',
+                immunities: '',
+                senses: 'Visão no escuro 36 m',
+                languages: '-',
+                challenge: '4 (1.100 XP)',
+                xp: 1100,
+                traits: [
+                { name: 'Instinto Lunar', desc: 'Vê no escuro a até 36 m.' },
+                { name: 'Rugido de Caça (Recarga 5–6)', desc: 'Criaturas a 9 m fazem CD 14 de Sabedoria ou ficam Amedrontadas por 1 turno.' },
+                { name: 'Raiva Lunar', desc: 'Quando Thraxa fica abaixo de metade dos PV, ela faz um ataque extra em cada turno.' }
+                ],
+                actions: [
+                { name: 'Multiataque', desc: 'A criatura faz dois ataques: um com Mordida e um com Garra.', type: 'multi', count: 2 },
+                { name: 'Mordida', desc: '+6 para acertar, alcance 1,5 m, um alvo. Dano: 13 (2d8 + 4) perfurante.', type: 'attack', bonus: 6, dice: '2d8', dmgBonus: 4, dtype: 'perfurante' },
+                { name: 'Garras', desc: '+6 para acertar, alcance 1,5 m, um alvo. Dano: 11 (2d6 + 4) cortante.', type: 'attack', bonus: 6, dice: '2d6', dmgBonus: 4, dtype: 'cortante' }
+                ],
+                theme: 'red'
+            },
+            {
+                id: 'lilia',
+                name: 'Lilia, a Monja do Silêncio',
+                meta: 'Humanoide Médio, Leal Neutra',
+                ac: '16 (defesa desarmada)',
+                hp: '60 (10d8+20)',
+                speed: '12 m',
+                scores: { str: 12, dex: 18, con: 14, int: 10, wis: 16, cha: 12 },
+                saves: [],
+                skills: [],
+                vulnerabilities: '',
+                resistances: 'radiante, trovejante',
+                immunities: '',
+                senses: 'Percepção passiva 13',
+                languages: 'Comum',
+                challenge: '4 (1.100 XP)',
+                xp: 1100,
+                traits: [
+                { name: 'Aura de Silêncio (6 m)', desc: 'Nenhum som é produzido na área. Magias com componente verbal falham.' },
+                { name: 'Golpes Etéreos', desc: 'Seus ataques desarmados contam como mágicos e causam dano radiante.' },
+                { name: 'Passo Vazio (Recarga 5–6)', desc: 'Teleporta até 9 m como ação bônus.' }
+                ],
+                actions: [
+                { name: 'Multiataque', desc: 'Lilia faz três ataques desarmados.', type: 'multi', count: 3 },
+                { name: 'Ataque Desarmado', desc: '+6 para acertar, alcance 1,5 m, um alvo. Dano: 8 (1d8 + 4) contundente + 3 (1d6) radiante.', type: 'attack', bonus: 6, dice: '1d8', dmgBonus: 4, dtype: 'contundente' },
+                { name: 'Onda de Ki', desc: 'Cone de 6 m. CD 14 Constituição. Dano: 13 (3d8) trovejante, ou metade se passar no teste.', type: 'save', dc: 14, stat: 'CON', damage: '3d8', dtype: 'trovejante' }
+                ],
+                theme: 'blue'
+            },
+            {
+                id: 'morrigen',
+                name: 'Morrigen, a Voz Esquecida',
+                meta: 'Fey Média, Neutra Maligna',
+                ac: '14 (proteção ilusória)',
+                hp: '58 (9d8+18)',
+                speed: '9 m, voo 6 m (levitação)',
+                scores: { str: 8, dex: 14, con: 14, int: 16, wis: 14, cha: 18 },
+                resistances: 'psíquico, necrótico',
+                challenge: '4 (1.100 XP)',
+                xp: 1100,
+                traits: [
+                { name: 'Encanto Sombrio', desc: 'CD 15 de Sabedoria, criatura fica encantada por 1 min se falhar.' },
+                { name: 'Voz da Mentira', desc: 'Pode lançar Sugestão e Hipnotizar Pessoa 3/dia cada.' },
+                { name: 'Eco dos Mortos (1/Dia)', desc: 'Pode invocar 2 sombras que agem por 3 rodadas.' }
+                ],
+                actions: [
+                { name: 'Toque da Desmemória', desc: '+5 para acertar, alcance 1,5 m. Dano: 9 (2d8) necrótico e a vítima esquece 1 rodada (perde reação e não pode repetir a última ação).', type: 'attack', bonus: 5, dice: '2d8', dmgBonus: 0, dtype: 'necrótico' },
+                { name: 'Grito Silencioso (Recarga 5–6)', desc: 'Cone 9 m, CD 14 Sabedoria. Dano: 16 (3d10) psíquico, metade se passar.', type: 'save', dc: 14, stat: 'SAB', damage: '3d10', dtype: 'psíquico' }
+                ],
+                theme: 'purple'
+            },
+            {
+                id: 'elgathra',
+                name: 'Elgathra, o Eco do Eclipse',
+                meta: 'Aberração Grande, Caótica Neutra',
+                ac: '17 (armadura natural)',
+                hp: '150 (18d10+36)',
+                speed: '9 m, voo 9 m',
+                scores: { str: 16, dex: 16, con: 14, int: 16, wis: 16, cha: 18 },
+                resistances: 'radiante, psíquico, necrótico',
+                immunities: 'medo, enfeitiçado',
+                challenge: '8 (3.900 XP)',
+                xp: 3900,
+                traits: [
+                { name: 'Três Almas, Um Corpo', desc: 'Age duas vezes por rodada (no início e no fim da ordem de iniciativa).' },
+                { name: 'Fragmentos da Lua', desc: 'Quando perde 50 PV, uma das personalidades se manifesta (gera uma aura aleatória: silêncio, medo ou ilusão).' },
+                { name: 'Reintegração', desc: 'Se qualquer das três versões ainda estiver viva, ela regenera 10 PV por rodada.' }
+                ],
+                actions: [
+                { name: 'Multiataque', desc: 'Elgathra faz três ataques.', type: 'multi', count: 3 },
+                { name: 'Toque do Eclipse', desc: '+7 para acertar, alcance 1,5 m. Dano: 13 (2d8 + 4) necrótico.', type: 'attack', bonus: 7, dice: '2d8', dmgBonus: 4, dtype: 'necrótico' },
+                { name: 'Explosão do Eclipse (Recarga 5–6)', desc: 'Escuridão e luz se misturam num raio de 9 m. CD 15 de Constituição. Falha: 22 (5d8) radiante + cego por 1 rodada. Sucesso: metade do dano.', type: 'save', dc: 15, stat: 'CON', damage: '5d8', dtype: 'radiante' }
+                ],
+                theme: 'gold'
+            },
+            {
+                id: 'soldado-ceu',
+                name: 'Soldado do Céu',
+                meta: 'Humanóide Celestial Médio, Leal Bom',
+                ac: '15 (armadura de luz)',
+                hp: '22 (5d8)',
+                speed: '9 m, voo 9 m',
+                scores: { str: 12, dex: 14, con: 10, int: 10, wis: 12, cha: 14 },
+                saves: [],
+                skills: ['Percepção +3', 'Atletismo +3', 'Intimidação +2'],
+                vulnerabilities: '',
+                resistances: '',
+                immunities: '',
+                senses: 'Visão no escuro 18 m',
+                languages: 'Celestial, Comum',
+                challenge: '1/2 (100 XP)',
+                xp: 100,
+                traits: [
+                { name: 'Armadura de Luz', desc: 'Quando atacado por uma criatura que está no escuro, causa 1d4 radiante adicional no próximo ataque contra ela.' },
+                { name: 'Disciplina Celeste', desc: 'Vantagem em testes para resistir a medo e encantamento.' },
+                { name: 'Benção da Asa', desc: 'Pode planar até 6 metros sem sofrer dano de queda.' }
+                ],
+                actions: [
+                { name: 'Espada Radiante', desc: 'Corpo a Corpo: +4 para atingir, alcance 1,5 m. Dano: 6 (1d8 + 2) cortante + 3 (1d6) radiante.', type: 'attack', bonus: 4, dice: '1d8', dmgBonus: 2, dtype: 'cortante' },
+                { name: 'Arco de Luz', desc: 'Distância: +4 para atingir, 45/150 m. Dano: 5 (1d8 + 1) perfurante. Alvo emite luz fraca (3 m) até o próximo turno.', type: 'attack', bonus: 4, dice: '1d8', dmgBonus: 1, dtype: 'perfurante' }
+                ],
+                reactions: [
+                { name: 'Defesa Brilhante', desc: 'Quando um aliado a 3 m é atingido, emite clarão. Atacante faz CD 12 Con ou sofre desvantagem no próximo ataque.' }
+                ],
+                theme: 'gold'
+            }
+        ];
+
+        const ENVIRONMENTS = {
+            floresta: {
+                name: 'Floresta Antiga',
+                icon: <Icons.Users className="text-emerald-500" />,
+                events: [
+                { title: 'Raízes Vivas', desc: 'O chão se agita. O terreno se torna difícil para todos exceto bestas e plantas.' },
+                { title: 'Névoa Súbita', desc: 'Uma névoa densa cobre a área. Visibilidade reduzida a 3 metros.' },
+                { title: 'Chuva de Esporos', desc: 'Esporos caem. Todos devem fazer CD 12 CON ou ficam Envenenados por 1 rodada.' }
+                ]
+            },
+            montanha: {
+                name: 'Picos Rochosos',
+                icon: <Icons.Moon className="text-slate-400" />,
+                events: [
+                { title: 'Deslizamento', desc: 'Pedras caem. CD 13 DES para todos ou tomam 2d6 contundente.' },
+                { title: 'Vento Uivante', desc: 'Ventos fortes impõem desvantagem em ataques à distância.' },
+                { title: 'Ar Rarefeito', desc: 'Fadiga rápida. Quem correr ou usar Ação de Disparar deve passar CD 12 CON ou ganha 1 nível de exaustão.' }
+                ]
+            },
+            mar: {
+                name: 'Alto Mar / Costa',
+                icon: <Icons.Anchor className="text-blue-500" />,
+                events: [
+                { title: 'Onda Gigante', desc: 'O terreno balança ou é atingido por água. Teste de Força (Atletismo) CD 13 ou cai no chão.' },
+                { title: 'Convés Escorregadio', desc: 'O chão está molhado. Quem se mover mais da metade do deslocamento deve passar CD 12 DES ou cai.' },
+                { title: 'Cerne da Tempestade', desc: 'Raios caem. Um alvo aleatório sofre 2d10 elétrico.' }
+                ]
+            },
+            astral: {
+                name: 'Plano Astral',
+                icon: <Icons.Sparkles className="text-fuchsia-400" />,
+                events: [
+                { title: 'Gravidade Subjetiva', desc: 'A gravidade muda. Escolha uma direção como "baixo".' },
+                { title: 'Vórtice Psíquico', desc: 'Ventos mentais. Todos sofrem 1d4 de dano psíquico no início do turno.' },
+                { title: 'Distorção Temporal', desc: 'O tempo flutua. Iniciativa é re-rolada no final da rodada.' }
+                ]
+            },
+            feerico: {
+                name: 'Reino Feérico',
+                icon: <Icons.Star className="text-pink-400" />,
+                events: [
+                { title: 'Pó de Pixie', desc: 'Poeira mágica. Todos ganham voo 6m por 1 rodada, mas têm desvantagem em Sabedoria.' },
+                { title: 'Cores Hipnóticas', desc: 'Luzes dançam. CD 12 SAB ou fica Enfeitiçado por uma criatura aleatória até o fim do turno.' },
+                { title: 'Crescimento Selvagem', desc: 'Plantas crescem instantaneamente. Cobertura total para quem estiver perto de vegetação.' }
+                ]
+            },
+            celestial: {
+                name: 'Reino Celestial',
+                icon: <Icons.Sun className="text-amber-400" />,
+                events: [
+                { title: 'Luz da Verdade', desc: 'Nenhuma mentira pode ser dita. Ilusões e invisibilidade são dissipadas.' },
+                { title: 'Coro Angelical', desc: 'Música sacra. Todos recuperam 1d4 PV no início de seus turnos.' },
+                { title: 'Julgamento', desc: 'Criaturas Malignas sofrem 1d6 radiante. Boas ganham 1d6 temporário.' }
+                ]
+            },
+            infernal: {
+                name: 'Reino Infernal',
+                icon: <Icons.Flame className="text-red-500" />,
+                events: [
+                { title: 'Chamas do Chão', desc: 'Gêiseres de fogo. O chão causa 1d6 de fogo a quem terminar o turno no solo.' },
+                { title: 'Sussurros Profanos', desc: 'Vozes tentam corromper. CD 12 CAR ou ataca o aliado mais próximo.' },
+                { title: 'Escuridão Magmática', desc: 'A luz diminui. Luz mágica tem seu raio reduzido à metade.' }
+                ]
+            }
+        };
+
+        const rollDice = (sides) => Math.floor(Math.random() * sides) + 1;
+
+        const calculateDamage = (diceStr, bonus) => {
+            if (!diceStr) return { total: 0, breakdown: '0' };
+            const [count, die] = diceStr.split('d').map(Number);
+            let total = 0;
+            let rolls = [];
+            
+            for(let i=0; i<count; i++) {
+                const r = rollDice(die);
+                rolls.push(r);
+                total += r;
+            }
+            
+            const bonusNum = parseInt(bonus) || 0;
+            total += bonusNum;
+            
+            const rollsStr = `[${rolls.join('+')}]`;
+            const breakdown = `${rollsStr}${bonusNum !== 0 ? (bonusNum > 0 ? ` + ${bonusNum}` : ` - ${Math.abs(bonusNum)}`) : ''}`;
+            
+            return { total, breakdown };
+        };
+
+        // --- COMPONENTES ---
+
+        const TaperedRule = ({ color = 'bg-red-800' }) => (
+            <div className="my-4 h-[2px] w-full relative">
+                <div className={`absolute inset-0 bg-gradient-to-r from-transparent via-${color} to-transparent opacity-80`}></div>
+            </div>
+        );
+
+        const AttributeBlock = ({ label, score }) => {
+            const mod = Math.floor((score - 10) / 2);
+            const sign = mod >= 0 ? '+' : '';
+            return (
+                <div className="flex flex-col items-center p-2 rounded bg-slate-800/50 border border-slate-700">
+                <span className="font-bold text-slate-400 text-xs uppercase tracking-wider">{label}</span>
+                <span className="text-xl font-serif text-slate-200">{score}</span>
+                <span className="text-xs text-slate-400">({sign}{mod})</span>
+                </div>
+            );
+        };
+
+        const StatBlock = ({ creature }) => {
+            let accentColor = 'red-500';
+            let ruleColor = 'red-800';
+            
+            if (creature.theme === 'blue') { accentColor = 'cyan-400'; ruleColor = 'cyan-900'; }
+            if (creature.theme === 'purple') { accentColor = 'fuchsia-400'; ruleColor = 'fuchsia-900'; }
+            if (creature.theme === 'gold') { accentColor = 'amber-400'; ruleColor = 'amber-700'; }
+            if (creature.theme === 'emerald') { accentColor = 'emerald-400'; ruleColor = 'emerald-900'; }
+
+            return (
+                <div className="w-full max-w-2xl mx-auto bg-slate-900 border-2 border-slate-700 shadow-2xl rounded-lg overflow-hidden font-sans text-slate-300 relative">
+                <div className="absolute inset-0 bg-[url('https://www.transparenttextures.com/patterns/stardust.png')] opacity-10 pointer-events-none"></div>
+                
+                <div className={`bg-slate-950 p-6 border-b border-${ruleColor}`}>
+                    <h1 className={`font-serif text-3xl font-bold text-${accentColor} tracking-wide`}>{creature.name}</h1>
+                    <p className="italic text-slate-400 mt-1">{creature.meta}</p>
+                </div>
+
+                <div className="p-6 space-y-4">
+                    <TaperedRule color={ruleColor.replace('bg-', '')} />
+                    <div className="flex flex-wrap gap-6 text-sm md:text-base">
+                    <div className="flex items-center gap-2"><Icons.Shield className={`w-5 h-5 text-${accentColor}`} /><span className="font-bold">CA</span> {creature.ac}</div>
+                    <div className="flex items-center gap-2"><Icons.Heart className={`w-5 h-5 text-${accentColor}`} /><span className="font-bold">PV</span> {creature.hp}</div>
+                    <div className="flex items-center gap-2"><Icons.Wind className={`w-5 h-5 text-${accentColor}`} /><span className="font-bold">Desl.</span> {creature.speed}</div>
+                    </div>
+                    <TaperedRule color={ruleColor.replace('bg-', '')} />
+                    <div className="grid grid-cols-3 md:grid-cols-6 gap-2">
+                    {Object.entries(creature.scores).map(([k, v]) => <AttributeBlock key={k} label={k} score={v} />)}
+                    </div>
+                    <TaperedRule color={ruleColor.replace('bg-', '')} />
+                    <div className="space-y-1 text-sm">
+                    {creature.skills && creature.skills.length > 0 && <p><span className="font-bold">Perícias</span> {creature.skills.join(', ')}</p>}
+                    <p><span className="font-bold">Sentidos</span> {creature.senses}</p>
+                    <p><span className="font-bold">Idiomas</span> {creature.languages}</p>
+                    <p><span className="font-bold">Desafio</span> {creature.challenge}</p>
+                    </div>
+                    <TaperedRule color={ruleColor.replace('bg-', '')} />
+                    <div className="space-y-3">
+                    {creature.traits && creature.traits.map((trait, idx) => (
+                        <div key={idx} className="text-sm leading-relaxed"><span className="font-bold italic text-slate-200">{trait.name}.</span> {trait.desc}</div>
+                    ))}
+                    </div>
+                    {creature.actions && creature.actions.length > 0 && (
+                    <div className="mt-6">
+                        <h3 className={`font-serif text-xl font-bold border-b border-slate-700 pb-1 mb-3 text-${accentColor}`}>Ações</h3>
+                        <div className="space-y-4">
+                        {creature.actions.map((action, idx) => (
+                            <div key={idx} className="text-sm leading-relaxed"><span className="font-bold italic text-slate-200">{action.name}.</span> {action.desc}</div>
+                        ))}
+                        </div>
+                    </div>
+                    )}
+                    {creature.reactions && creature.reactions.length > 0 && (
+                    <div className="mt-6">
+                        <h3 className={`font-serif text-xl font-bold border-b border-slate-700 pb-1 mb-3 text-${accentColor}`}>Reações</h3>
+                        <div className="space-y-4">
+                        {creature.reactions.map((action, idx) => (
+                            <div key={idx} className="text-sm leading-relaxed"><span className="font-bold italic text-slate-200">{action.name}.</span> {action.desc}</div>
+                        ))}
+                        </div>
+                    </div>
+                    )}
+                </div>
+                </div>
+            );
+        };
+
+        const ToastContainer = ({ toasts, removeToast }) => (
+            <div className="fixed top-4 right-4 z-50 flex flex-col gap-2 w-full max-w-[90vw] md:max-w-sm pointer-events-none">
+                {toasts.map(toast => (
+                <div 
+                    key={toast.id} 
+                    className={`bg-slate-900 border-l-4 p-4 shadow-2xl rounded-r flex flex-col pointer-events-auto transform transition-all duration-300 animate-in slide-in-from-right fade-in ${
+                    toast.type === 'crit' ? 'border-amber-500 shadow-amber-900/20' : 
+                    toast.type === 'event' ? 'border-purple-500 shadow-purple-900/20' : 
+                    'border-blue-500 shadow-blue-900/20'
+                    }`}
+                >
+                    <div className="flex justify-between items-start">
+                    <div className="font-bold text-slate-100 font-serif mb-1">{toast.title}</div>
+                    <button onClick={() => removeToast(toast.id)} className="text-slate-500 hover:text-white"><Icons.X size={14}/></button>
+                    </div>
+                    <div className="text-sm text-slate-300 whitespace-pre-wrap">{toast.message}</div>
+                </div>
+                ))}
+            </div>
+        );
+
+        const ArenaTracker = ({ combatants, setCombatants, log, addLog, envKey, eventFreq }) => {
+            const [round, setRound] = useState(1);
+            const [turnIndex, setTurnIndex] = useState(0);
+            const [activeEvent, setActiveEvent] = useState(null);
+
+            const activeEnvironment = ENVIRONMENTS[envKey];
+
+            useEffect(() => {
+                if (round > 1 && (round - 1) % eventFreq === 0 && turnIndex === 0) {
+                const events = activeEnvironment.events;
+                const randomEvent = events[Math.floor(Math.random() * events.length)];
+                setActiveEvent(randomEvent);
+                addLog(`EVENTO: ${randomEvent.title}`, `${randomEvent.desc}`, 'event');
+                } else if (round > 1 && (round - 1) % eventFreq !== 0) {
+                if (activeEvent && turnIndex === 0) setActiveEvent(null);
+                }
+            }, [round, turnIndex, eventFreq, addLog, activeEnvironment]);
+
+            const nextTurn = () => {
+                if (turnIndex >= combatants.length - 1) {
+                setTurnIndex(0);
+                setRound(r => r + 1);
+                } else {
+                setTurnIndex(i => i + 1);
+                }
+            };
+
+            const updateCombatant = (uniqueId, field, value) => {
+                setCombatants(prev => prev.map(c => {
+                if (c.uniqueId === uniqueId) {
+                    return { ...c, [field]: value };
+                }
+                return c;
+                }));
+            };
+
+            const performAction = (combatant, action) => {
+                let logTitle = `${combatant.name} usa ${action.name}`;
+                let logMsg = '';
+                let type = 'info';
+
+                // CORREÇÃO: Tratamento de NaN e tipos de ação
+                if (action.type === 'save') {
+                    const { total, breakdown } = calculateDamage(action.damage, 0); 
+                    logMsg = `Exige TR de CD ${action.dc} (${action.stat}).\nDano Potencial: ${total} (${action.dtype})\nDados: ${breakdown}`;
+                    type = 'info';
+                } 
+                else if (action.type === 'multi') {
+                    logMsg = `Realiza ${action.count} ataques!\n(Role cada ataque individualmente)`;
+                    type = 'info';
+                } 
+                else if (action.type === 'info') {
+                    logMsg = action.desc;
+                    type = 'info';
+                }
+                else {
+                    const d20 = rollDice(20);
+                    const bonus = action.bonus || 0; 
+                    const hitTotal = d20 + bonus;
+                    const isCrit = d20 === 20;
+                    const isFail = d20 === 1;
+
+                    let dmgDetails = { total: 0, breakdown: '0' };
+                    if (action.dice) {
+                        dmgDetails = calculateDamage(action.dice, action.dmgBonus);
+                        if (isCrit) {
+                            const critDmg = calculateDamage(action.dice, 0); 
+                            dmgDetails.total += critDmg.total;
+                            dmgDetails.breakdown += ` + [CRIT: ${critDmg.breakdown}]`;
+                        }
+                    }
+
+                    logMsg = `Acerto: [${d20}] ${bonus >= 0 ? '+' : ''} ${bonus} = ${hitTotal}`;
+                    if (isCrit) {
+                        logMsg += ` (CRÍTICO!)`;
+                        type = 'crit';
+                    } else if (isFail) {
+                        logMsg += ` (ERRO CRÍTICO!)`;
+                    }
+
+                    if (dmgDetails.total > 0) {
+                        logMsg += `\nDano: ${dmgDetails.total} (${action.dtype})\nCálculo: ${dmgDetails.breakdown}`;
+                    }
+                }
+
+                addLog(logTitle, logMsg, type);
+            };
+
+            const sortedCombatants = [...combatants].sort((a, b) => b.init - a.init);
+            const currentCombatant = sortedCombatants[turnIndex];
+
+            return (
+                <div className="flex flex-col h-full relative">
+                <div className="flex justify-between items-center p-4 bg-slate-900 border-b border-slate-800">
+                    <div className="flex items-center gap-4">
+                    <div className="text-amber-500 font-bold text-xl flex gap-2 items-center"><Icons.RotateCcw size={20}/> Rodada {round}</div>
+                    <div className="text-slate-400 text-sm flex flex-col">
+                        <span>Cenário: <span className="text-slate-200">{activeEnvironment.name}</span></span>
+                        <span className="text-xs text-slate-500">Evento a cada {eventFreq} rodadas</span>
+                    </div>
+                    </div>
+                    <button onClick={nextTurn} className="bg-amber-600 hover:bg-amber-500 text-white px-4 py-2 rounded font-bold flex gap-2 shadow-lg transition-transform active:scale-95">
+                    <Icons.Play size={16} fill="white" /> Próximo Turno
+                    </button>
+                </div>
+
+                {activeEvent && (
+                    <div className="bg-purple-900/50 border-y border-purple-500 p-3 flex items-center justify-center gap-3 animate-pulse">
+                    <Icons.Sparkles className="text-purple-300" />
+                    <div className="text-center">
+                        <div className="font-bold text-purple-200 uppercase tracking-widest">{activeEvent.title}</div>
+                        <div className="text-sm text-purple-100">{activeEvent.desc}</div>
+                    </div>
+                    </div>
+                )}
+
+                <div className="flex-1 flex flex-col md:flex-row overflow-hidden">
+                    <div className="w-full md:w-1/3 h-40 md:h-full bg-slate-900/50 border-b md:border-b-0 md:border-r border-slate-800 overflow-y-auto p-2 scrollbar-thin scrollbar-thumb-slate-700 shrink-0">
+                    {sortedCombatants.map((c, idx) => (
+                        <div key={c.uniqueId} className={`p-2 mb-2 rounded border flex flex-col gap-1 transition-all ${
+                        idx === turnIndex ? 'bg-slate-800 border-amber-500 shadow-lg' : 'bg-slate-900 border-slate-800 opacity-90'
+                        }`}>
+                        <div className="flex justify-between items-center mb-1">
+                            <span className={`font-bold truncate pr-2 ${c.isPlayer ? 'text-blue-400' : 'text-red-400'}`}>{c.name}</span>
+                            <span className="text-slate-500 font-mono text-xs bg-slate-950 px-1 rounded">Inic: {c.init}</span>
+                        </div>
+                        
+                        <div className="grid grid-cols-2 gap-2 text-xs">
+                            <div className="flex items-center gap-1 bg-slate-950 p-1 rounded border border-slate-800">
+                                <Icons.Heart size={10} className="text-red-500"/>
+                                <input 
+                                type="number" 
+                                className="w-full bg-transparent outline-none text-slate-200 font-mono" 
+                                value={c.hp} 
+                                onChange={(e) => updateCombatant(c.uniqueId, 'hp', parseInt(e.target.value) || 0)}
+                                />
+                                <span className="text-slate-600">/{c.maxHp}</span>
+                            </div>
+                            <div className="flex items-center gap-1 bg-slate-950 p-1 rounded border border-slate-800">
+                                <Icons.Shield size={10} className="text-slate-400"/>
+                                <input 
+                                type="number" 
+                                className="w-full bg-transparent outline-none text-slate-200 font-mono" 
+                                value={c.ac} 
+                                onChange={(e) => updateCombatant(c.uniqueId, 'ac', parseInt(e.target.value) || 0)}
+                                />
+                            </div>
+                        </div>
+                        
+                        <div className="mt-1">
+                            <input 
+                            className="w-full bg-transparent border-b border-slate-800 text-[10px] text-yellow-500 placeholder-slate-700 outline-none focus:border-yellow-900" 
+                            placeholder="Condições (ex: Envenenado)"
+                            value={c.condition || ''}
+                            onChange={(e) => updateCombatant(c.uniqueId, 'condition', e.target.value)}
+                            />
+                        </div>
+                        </div>
+                    ))}
+                    </div>
+
+                    <div className="flex-1 w-full md:w-2/3 flex flex-col bg-slate-950">
+                    <div className="flex-1 p-6 overflow-y-auto relative">
+                        <div className="absolute inset-0 flex items-center justify-center pointer-events-none opacity-5">
+                            <Icons.Swords size={200} />
+                        </div>
+
+                        {currentCombatant ? (
+                        <div className="relative z-10">
+                            <h3 className="text-2xl font-serif text-slate-200 mb-4 flex items-center gap-2">
+                            Vez de <span className={currentCombatant.isPlayer ? 'text-blue-400' : 'text-red-400'}>{currentCombatant.name}</span>
+                            </h3>
+                            
+                            {currentCombatant.condition && (
+                            <div className="mb-4 bg-yellow-900/20 border border-yellow-900/50 p-2 rounded text-yellow-200 text-sm flex gap-2 items-center">
+                                <Icons.AlertTriangle size={16}/> Condições Atuais: {currentCombatant.condition}
+                            </div>
+                            )}
+                            
+                            {!currentCombatant.isPlayer && currentCombatant.actions ? (
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                {currentCombatant.actions.map((action, i) => (
+                                <button key={i} onClick={() => performAction(currentCombatant, action)} 
+                                    className="p-4 bg-slate-900 hover:bg-slate-800 border border-slate-700 hover:border-amber-500 rounded text-left transition-all group shadow-md hover:shadow-lg hover:-translate-y-1">
+                                    <div className="font-bold text-amber-500 group-hover:text-amber-400 flex items-center gap-2">
+                                    <Icons.Dices size={16}/> {action.name}
+                                    </div>
+                                    <div className="text-xs text-slate-400 mt-1 line-clamp-2">{action.desc}</div>
+                                </button>
+                                ))}
+                            </div>
+                            ) : (
+                            <div className="text-slate-500 italic border-2 border-dashed border-slate-800 p-8 rounded text-center">
+                                <Icons.Users size={48} className="mx-auto mb-2 opacity-50"/>
+                                Aguardando jogador declarar ação...
+                            </div>
+                            )}
+                        </div>
+                        ) : (
+                        <div className="text-center text-slate-500 mt-10">Combate finalizado ou vazio.</div>
+                        )}
+                    </div>
+
+                    <div className="h-32 md:h-48 bg-black border-t-2 border-slate-800 flex flex-col shrink-0">
+                        <div className="px-2 py-1 bg-slate-900 text-xs font-bold text-slate-500 uppercase tracking-wider flex items-center gap-1">
+                            <Icons.Scroll size={12}/> Histórico de Combate
+                        </div>
+                        <div className="flex-1 p-2 overflow-y-auto font-mono text-xs space-y-2 scrollbar-thin scrollbar-thumb-slate-700 scrollbar-track-transparent">
+                            {log.length === 0 && <div className="text-slate-700 italic text-center mt-4">Nenhum evento registrado...</div>}
+                            {log.map((entry) => (
+                            <div key={entry.id} className={`pb-1 border-b border-slate-900/50 ${entry.type === 'event' ? 'text-purple-400' : entry.type === 'crit' ? 'text-amber-400' : 'text-slate-300'}`}>
+                                <span className="opacity-40 text-[10px] mr-2">[{entry.timestamp}]</span>
+                                <span className="font-bold">{entry.title}: </span>
+                                <span className="opacity-80 whitespace-pre-wrap">{entry.message.replace(/\n/g, ' | ')}</span>
+                            </div>
+                            ))}
+                        </div>
+                    </div>
+                    </div>
+                </div>
+                </div>
+            );
+        };
+
+        const App = () => {
+            const [creatures, setCreatures] = useState(initialCreatures);
+            const [view, setView] = useState('library'); 
+            const [selectedId, setSelectedId] = useState('garw-renk');
+            const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+            
+            const [arenaState, setArenaState] = useState('setup'); 
+            const [selectedEnv, setSelectedEnv] = useState('floresta');
+            const [arenaCombatants, setArenaCombatants] = useState([]);
+            const [arenaLog, setArenaLog] = useState([]);
+            const [toasts, setToasts] = useState([]); 
+            const [showEnvEvents, setShowEnvEvents] = useState(false);
+            
+            const [playerInit, setPlayerInit] = useState('');
+            const [playerName, setPlayerName] = useState('Jogador');
+            const [playerHP, setPlayerHP] = useState(10); 
+            const [playerAC, setPlayerAC] = useState(10); 
+            const [selectedEnemyId, setSelectedEnemyId] = useState(initialCreatures[1].id); 
+            const [enemyCount, setEnemyCount] = useState(1);
+            const [partyLevel, setPartyLevel] = useState(5);
+            const [eventFreq, setEventFreq] = useState(10);
+
+            const selectedCreature = creatures.find(c => c.id === selectedId);
+
+            const addLog = useCallback((title, message, type = 'info') => {
+                const timestamp = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+                const id = Date.now();
+                setArenaLog(prev => [{ id, timestamp, title, message, type }, ...prev]);
+                const newToast = { id, title, message, type };
+                setToasts(prev => [newToast, ...prev]);
+                setTimeout(() => { setToasts(prev => prev.filter(t => t.id !== id)); }, 4000);
+            }, []);
+
+            const removeToast = (id) => { setToasts(prev => prev.filter(t => t.id !== id)); };
+
+            const calculateDifficulty = () => {
+                const enemy = creatures.find(c => c.id === selectedEnemyId);
+                if(!enemy) return { label: 'Desconhecido', color: 'text-slate-500' };
+                
+                const levelData = XP_THRESHOLDS[partyLevel] || XP_THRESHOLDS[5];
+                const partySize = 4;
+                
+                let multiplier = 1;
+                if (enemyCount === 2) multiplier = 1.5;
+                if (enemyCount >= 3 && enemyCount <= 6) multiplier = 2;
+                if (enemyCount >= 7 && enemyCount <= 10) multiplier = 2.5;
+                if (enemyCount >= 11) multiplier = 3;
+
+                const totalXp = (enemy.xp || 0) * enemyCount * multiplier;
+                const adjustedXpPerPlayer = totalXp / partySize;
+
+                if (adjustedXpPerPlayer < levelData.easy) return { label: 'Trivial', color: 'text-slate-400' };
+                if (adjustedXpPerPlayer < levelData.medium) return { label: 'Fácil', color: 'text-green-400' };
+                if (adjustedXpPerPlayer < levelData.hard) return { label: 'Média', color: 'text-yellow-400' };
+                if (adjustedXpPerPlayer < levelData.deadly) return { label: 'Difícil', color: 'text-orange-500' };
+                return { label: 'Mortal', color: 'text-red-600 font-bold animate-pulse' };
+            };
+
+            const addPlayer = () => {
+                const init = parseInt(playerInit) || rollDice(20);
+                const pName = playerName.trim() || `Jogador ${arenaCombatants.filter(c=>c.isPlayer).length + 1}`;
+                
+                setArenaCombatants([...arenaCombatants, {
+                uniqueId: `pc-${Date.now()}`,
+                name: pName,
+                init: init,
+                hp: playerHP,      
+                maxHp: playerHP,   
+                ac: playerAC,      
+                condition: '',     
+                isPlayer: true
+                }]);
+                
+                setPlayerName('');
+                setPlayerInit('');
+            };
+
+            const addEnemies = () => {
+                const enemyTemplate = creatures.find(c => c.id === selectedEnemyId);
+                if (!enemyTemplate) return;
+
+                const newEnemies = [];
+                const dexMod = Math.floor((enemyTemplate.scores.dex - 10) / 2);
+
+                for(let i=0; i<enemyCount; i++) {
+                const hpVal = parseInt(enemyTemplate.hp.split(' ')[0]) || 10; 
+                const acVal = parseInt(enemyTemplate.ac.split(' ')[0]) || 10;
+
+                newEnemies.push({
+                    uniqueId: `npc-${enemyTemplate.id}-${Date.now()}-${i}`,
+                    name: `${enemyTemplate.name} ${i+1}`,
+                    init: rollDice(20) + dexMod,
+                    hp: hpVal,
+                    maxHp: hpVal,
+                    ac: acVal,
+                    condition: '', 
+                    actions: enemyTemplate.actions,
+                    isPlayer: false
+                });
+                }
+                setArenaCombatants([...arenaCombatants, ...newEnemies]);
+            };
+
+            const startCombat = () => {
+                if(arenaCombatants.length === 0) return;
+                setArenaState('combat');
+                addLog('Combate Iniciado', 'Todos rolem iniciativa!', 'info');
+            };
+
+            return (
+                <div className="min-h-screen bg-slate-950 text-slate-200 font-sans flex flex-col md:flex-row overflow-hidden">
+                <ToastContainer toasts={toasts} removeToast={removeToast} />
+
+                {/* Mobile Header */}
+                <div className="md:hidden bg-slate-900 border-b border-slate-800 p-4 flex justify-between items-center z-20">
+                    <span className="font-serif font-bold text-amber-500 text-xl">Grimório do Eclipse</span>
+                    <button onClick={() => setIsSidebarOpen(!isSidebarOpen)} className="text-slate-200">
+                    {isSidebarOpen ? <Icons.X /> : <Icons.Menu />}
+                    </button>
+                </div>
+
+                {/* Sidebar */}
+                <div className={`
+                    fixed md:relative inset-y-0 left-0 w-72 bg-slate-900 border-r border-slate-800 z-10 transform transition-transform duration-300 ease-in-out flex flex-col
+                    ${isSidebarOpen ? 'translate-x-0' : '-translate-x-full'} md:translate-x-0
+                `}>
+                    <div className="p-6 border-b border-slate-800 hidden md:block">
+                    <h1 className="font-serif text-2xl font-bold text-amber-500 tracking-wider">Grimório do Eclipse</h1>
+                    </div>
+
+                    <div className="flex p-2 gap-2 border-b border-slate-800 bg-slate-950">
+                    <button onClick={() => setView('library')} className={`flex-1 py-2 rounded text-sm font-bold flex justify-center items-center gap-2 ${view === 'library' ? 'bg-amber-900/40 text-amber-500 border border-amber-800' : 'text-slate-500 hover:bg-slate-900'}`}>
+                        <Icons.Shield size={16} /> Grimório
+                    </button>
+                    <button onClick={() => setView('arena')} className={`flex-1 py-2 rounded text-sm font-bold flex justify-center items-center gap-2 ${view === 'arena' ? 'bg-red-900/40 text-red-500 border border-red-800' : 'text-slate-500 hover:bg-slate-900'}`}>
+                        <Icons.Swords size={16} /> Arena
+                    </button>
+                    </div>
+
+                    {view === 'library' && (
+                    <div className="flex-1 overflow-y-auto p-4 space-y-2">
+                        {creatures.map(c => (
+                        <button
+                            key={c.id}
+                            onClick={() => { setSelectedId(c.id); setIsSidebarOpen(false); }}
+                            className={`w-full text-left p-3 rounded-lg transition-all flex items-center gap-3 border ${selectedId === c.id
+                            ? 'bg-slate-800 border-amber-900/50 shadow-inner' 
+                            : 'bg-transparent border-transparent hover:bg-slate-800/50 hover:border-slate-700'}`}
+                        >
+                            <div className={`p-2 rounded-full ${
+                            c.theme === 'gold' ? 'bg-amber-900/30 text-amber-400' :
+                            c.theme === 'purple' ? 'bg-fuchsia-900/30 text-fuchsia-400' :
+                            c.theme === 'blue' ? 'bg-cyan-900/30 text-cyan-400' :
+                            c.theme === 'emerald' ? 'bg-emerald-900/30 text-emerald-400' :
+                            'bg-red-900/30 text-red-400'
+                            }`}>
+                            {c.theme === 'gold' ? <Icons.Activity size={16} /> :
+                            c.theme === 'purple' ? <Icons.Moon size={16} /> :
+                            c.theme === 'blue' ? <Icons.Zap size={16} /> :
+                            c.theme === 'emerald' ? <Icons.Shield size={16} /> :
+                            <Icons.Skull size={16} />}
+                            </div>
+                            <div>
+                            <div className={`font-bold text-sm ${selectedId === c.id ? 'text-slate-100' : 'text-slate-400'}`}>
+                                {c.name}
+                            </div>
+                            <div className="text-xs text-slate-600">ND {c.challenge?.split(' ')[0]}</div>
+                            </div>
+                        </button>
+                        ))}
+                    </div>
+                    )}
+
+                    {view === 'arena' && (
+                    <div className="flex-1 p-4 flex flex-col justify-center items-center text-slate-500 text-sm text-center">
+                        {arenaState === 'combat' ? (
+                        <>
+                            <Icons.Swords className="mb-2 text-red-500 animate-pulse" size={48} />
+                            <p>Combate em Andamento</p>
+                            <button onClick={() => { setArenaState('setup'); setArenaCombatants([]); }} className="mt-4 px-4 py-2 bg-slate-800 text-slate-300 rounded border border-slate-700 hover:text-white">
+                            Encerrar Batalha
+                            </button>
+                        </>
+                        ) : (
+                        <p>Configure a batalha ao lado.</p>
+                        )}
+                    </div>
+                    )}
+                </div>
+
+                <div className="flex-1 h-[calc(100vh-64px)] md:h-screen overflow-hidden bg-slate-950 relative">
+                    <div className="fixed top-0 right-0 w-96 h-96 bg-purple-900/10 rounded-full blur-3xl pointer-events-none"></div>
+                    
+                    {view === 'library' && (
+                    <div className="h-full overflow-y-auto p-4 md:p-8">
+                        {selectedCreature ? (
+                            <div className="animate-in fade-in slide-in-from-bottom-4 duration-500 max-w-4xl mx-auto">
+                            <StatBlock creature={selectedCreature} />
+                            </div>
+                        ) : null}
+                    </div>
+                    )}
+
+                    {view === 'arena' && arenaState === 'setup' && (
+                    <div className="h-full overflow-y-auto p-4 md:p-8 flex flex-col items-center">
+                        <div className="max-w-4xl w-full bg-slate-900 border border-slate-800 rounded-lg p-6 shadow-2xl">
+                            <h2 className="text-3xl font-serif text-amber-500 mb-6 flex items-center gap-2 border-b border-slate-800 pb-4">
+                            <Icons.MapIcon /> Preparação de Batalha
+                            </h2>
+
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                            {/* Left Col: Environment & Players */}
+                            <div className="space-y-6">
+                                {/* ENVIRONMENT */}
+                                <div className="bg-slate-950/50 p-4 rounded border border-slate-800">
+                                <label className="block text-sm font-bold text-slate-400 mb-2 flex items-center gap-2">
+                                    <Icons.Cloud size={16}/> Cenário & Eventos
+                                </label>
+                                
+                                <div className="grid grid-cols-2 gap-2 mb-3">
+                                    {Object.entries(ENVIRONMENTS).map(([key, env]) => (
+                                    <button key={key} onClick={() => { setSelectedEnv(key); setShowEnvEvents(false); }}
+                                        className={`p-2 rounded border flex flex-col items-center gap-1 transition-all ${selectedEnv === key ? 'bg-slate-800 border-amber-500 text-amber-400' : 'bg-slate-950 border-slate-800 text-slate-500 hover:bg-slate-800'}`}>
+                                        {env.icon}
+                                        <span className="text-[10px] font-bold uppercase">{env.name}</span>
+                                    </button>
+                                    ))}
+                                </div>
+
+                                <div className="flex gap-2 items-center mb-2">
+                                    <div className="flex-1">
+                                    <label className="text-xs text-slate-500 font-bold block mb-1">Rodadas por Evento</label>
+                                    <input type="number" min="1" className="w-full bg-slate-900 border border-slate-700 rounded p-1 text-sm text-center" 
+                                        value={eventFreq} onChange={e => setEventFreq(parseInt(e.target.value)||10)} />
+                                    </div>
+                                    <button onClick={() => setShowEnvEvents(!showEnvEvents)} className="flex-1 bg-slate-800 border border-slate-700 text-slate-300 text-xs py-2 rounded hover:bg-slate-700 flex justify-center items-center gap-1">
+                                    <Icons.Eye size={12}/> {showEnvEvents ? 'Ocultar Eventos' : 'Ver Eventos Possíveis'}
+                                    </button>
+                                </div>
+
+                                {showEnvEvents && (
+                                    <div className="mt-2 bg-slate-900 p-2 rounded border border-slate-800 text-xs space-y-2 animate-in slide-in-from-top-2">
+                                    <h4 className="font-bold text-amber-500">Eventos de {ENVIRONMENTS[selectedEnv].name}:</h4>
+                                    {ENVIRONMENTS[selectedEnv].events.map((ev, i) => (
+                                        <div key={i}><span className="font-bold text-slate-300">{ev.title}:</span> <span className="text-slate-500">{ev.desc}</span></div>
+                                    ))}
+                                    </div>
+                                )}
+                                </div>
+
+                                {/* PLAYERS */}
+                                <div className="bg-slate-950 p-4 rounded border border-slate-800">
+                                <label className="block text-sm font-bold text-slate-400 mb-2 flex items-center gap-2">
+                                    <Icons.Users size={16} /> Configuração do Grupo
+                                </label>
+                                <div className="mb-4">
+                                    <label className="text-xs text-slate-500 block mb-1">Nível Médio dos Jogadores (para cálculo de XP)</label>
+                                    <input type="number" min="1" max="20" className="w-full bg-slate-900 border border-slate-700 rounded p-2 text-sm" 
+                                    value={partyLevel} onChange={e => setPartyLevel(Math.min(20, Math.max(1, parseInt(e.target.value) || 1)))} />
+                                </div>
+
+                                <div className="border-t border-slate-800 pt-3">
+                                    <label className="text-xs text-slate-500 block mb-1">Adicionar Personagem</label>
+                                    
+                                    <div className="grid grid-cols-4 gap-2 mb-2">
+                                    <div className="col-span-2">
+                                        <input 
+                                            className="w-full bg-slate-900 border border-slate-700 rounded p-2 text-sm focus:border-amber-500 outline-none" 
+                                            placeholder="Nome" 
+                                            value={playerName} onChange={e=>setPlayerName(e.target.value)} 
+                                            onKeyDown={(e) => e.key === 'Enter' && addPlayer()}
+                                        />
+                                    </div>
+                                    <input 
+                                        className="bg-slate-900 border border-slate-700 rounded p-2 text-sm focus:border-amber-500 outline-none text-center" 
+                                        placeholder="Inic." type="number" value={playerInit} onChange={e=>setPlayerInit(e.target.value)} 
+                                    />
+                                    <button onClick={addPlayer} className="bg-blue-900 hover:bg-blue-800 text-blue-200 rounded flex justify-center items-center"><Icons.Plus size={18}/></button>
+                                    </div>
+                                    
+                                    <div className="grid grid-cols-2 gap-2 text-xs">
+                                    <div>
+                                        <span className="text-slate-500">HP Máx</span>
+                                        <input className="w-full bg-slate-900 border border-slate-700 rounded p-1" type="number" value={playerHP} onChange={e=>setPlayerHP(parseInt(e.target.value))} />
+                                    </div>
+                                    <div>
+                                        <span className="text-slate-500">CA</span>
+                                        <input className="w-full bg-slate-900 border border-slate-700 rounded p-1" type="number" value={playerAC} onChange={e=>setPlayerAC(parseInt(e.target.value))} />
+                                    </div>
+                                    </div>
+
+                                </div>
+                                </div>
+                            </div>
+
+                            {/* Right Col: Monsters */}
+                            <div className="space-y-6">
+                                <div className="bg-slate-950 p-4 rounded border border-slate-800 h-full flex flex-col">
+                                <label className="block text-sm font-bold text-slate-400 mb-2 flex items-center gap-2">
+                                    <Icons.Skull size={16} /> Adicionar Inimigos
+                                </label>
+                                
+                                <div className="flex-1">
+                                    <select className="w-full bg-slate-900 border border-slate-700 rounded p-2 text-sm mb-3" 
+                                        value={selectedEnemyId} onChange={e => setSelectedEnemyId(e.target.value)}>
+                                        {creatures.map(c => <option key={c.id} value={c.id}>{c.name} (ND {c.challenge})</option>)}
+                                    </select>
+                                    
+                                    <div className="flex items-center justify-between mb-4">
+                                        <span className="text-sm text-slate-400">Quantidade:</span>
+                                        <div className="flex items-center gap-2">
+                                        <button onClick={()=>setEnemyCount(Math.max(1, enemyCount-1))} className="p-1 bg-slate-800 rounded">-</button>
+                                        <span className="w-8 text-center font-bold">{enemyCount}</span>
+                                        <button onClick={()=>setEnemyCount(enemyCount+1)} className="p-1 bg-slate-800 rounded">+</button>
+                                        </div>
+                                    </div>
+
+                                    <div className="flex justify-between items-center bg-slate-900 p-2 rounded mb-4 border border-slate-800">
+                                        <div className="flex flex-col">
+                                        <span className="text-[10px] uppercase font-bold text-slate-500">Dificuldade Estimada</span>
+                                        <span className="text-[10px] text-slate-600">Para 4 jogadores Nível {partyLevel}</span>
+                                        </div>
+                                        <span className={`font-bold ${calculateDifficulty().color}`}>{calculateDifficulty().label}</span>
+                                    </div>
+
+                                    <button onClick={addEnemies} className="w-full py-2 bg-red-900/50 hover:bg-red-800 text-red-200 border border-red-800 rounded flex justify-center items-center gap-2 mb-4">
+                                        <Icons.Plus size={16} /> Adicionar ao Combate
+                                    </button>
+                                </div>
+                                </div>
+                            </div>
+                            </div>
+
+                            <div className="mt-8 border-t border-slate-800 pt-6">
+                            <h3 className="font-bold text-slate-400 mb-4">Combatentes ({arenaCombatants.length})</h3>
+                            <div className="flex flex-wrap gap-2 mb-6">
+                                {arenaCombatants.map((c, i) => (
+                                <div key={i} className={`text-xs px-3 py-1 rounded-full border flex items-center gap-2 ${c.isPlayer ? 'bg-blue-900/30 border-blue-800 text-blue-300' : 'bg-red-900/30 border-red-800 text-red-300'}`}>
+                                    {c.name} (Inic: {c.init} | HP: {c.hp})
+                                    <button onClick={() => setArenaCombatants(prev => prev.filter(x => x.uniqueId !== c.uniqueId))} className="hover:text-white"><Icons.X size={10}/></button>
+                                </div>
+                                ))}
+                                {arenaCombatants.length === 0 && <span className="text-slate-600 italic">Nenhum combatente adicionado.</span>}
+                            </div>
+
+                            <button onClick={startCombat} disabled={arenaCombatants.length === 0} 
+                                className="w-full py-4 bg-gradient-to-r from-amber-700 to-red-900 hover:from-amber-600 hover:to-red-800 text-white font-serif font-bold text-xl rounded shadow-lg disabled:opacity-50 disabled:cursor-not-allowed transition-all">
+                                INICIAR BATALHA
+                            </button>
+                            </div>
+                        </div>
+                    </div>
+                    )}
+
+                    {view === 'arena' && arenaState === 'combat' && (
+                    <ArenaTracker 
+                        combatants={arenaCombatants} 
+                        setCombatants={setArenaCombatants} 
+                        log={arenaLog} 
+                        addLog={addLog}
+                        envKey={selectedEnv}
+                        eventFreq={eventFreq}
+                    />
+                    )}
+
+                </div>
+                </div>
+            );
+        };
+
+        const root = ReactDOM.createRoot(document.getElementById('root'));
+        root.render(<App />);
+    </script>
+</body>
+</html>
